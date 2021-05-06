@@ -101,7 +101,7 @@ namespace PropPlacer.Editor
                 }
 
 
-                //visuals
+                // visuals
                 Handles.DrawWireDisc(brushPosition, Vector3.forward, BRUSH_SIZE);
                 foreach (RaycastHit2D hit in SURFACES_POINTS_HIT)
                     Handles.DrawWireDisc(hit.point, Vector3.forward, 0.25f);

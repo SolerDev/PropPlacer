@@ -1,6 +1,6 @@
 {
   "name": "com.isotropical.prop-placer",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "displayName": "Prop Placer",
   "description": "Place props in a 2D scene either by painting or with area based scattering.",
   "unity": "2019.1",
