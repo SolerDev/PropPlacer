@@ -63,7 +63,7 @@ namespace PropPlacer.Editor
                 }
             }
 
-            static Vector2 RandomPointInsideExtents(Vector2 area)
+            Vector2 RandomPointInsideExtents(Vector2 area)
             {
                 return Extensions.RandomVector2Range(-area.x, area.x, -area.y, area.y);
             }

@@ -9,7 +9,7 @@ namespace PropPlacer.Editor
         private static readonly System.Random RND = new System.Random();
 
         [SerializeField] private List<GameObject> _prefabs;
-        [NonReorderable] [SerializeField] private List<int> _chances;
+        [SerializeField] private List<int> _chances;
 
         public GameObject GetRandom()
         {

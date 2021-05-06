@@ -9,9 +9,10 @@ namespace PropPlacer.Editor
     {
         protected const string MENU_PATH = "Window/Prop/";
 
-        private static GameObject LAST_CREATED_OBJ;
+
         #region Properties
 
+        private static GameObject LAST_CREATED_OBJ;
         public static PrefabCollection OBJECT_COLLECTION;
         public static GameObject OBJECT_TO_SPAWN;
         public static bool IS_USING_OBJECT_COLLECTION => OBJECT_COLLECTION != null;
