@@ -10,15 +10,9 @@ namespace PropPlacer.Runtime
     {
         private static readonly System.Random RND = new System.Random();
 
-        public static bool IsBetweenBothExclusive(this IComparable v, IComparable a, IComparable b)
-        {
-            return (v.CompareTo(a) * v.CompareTo(b)).Equals(-1);
-        }
+        public static bool IsBetweenBothExclusive(this IComparable v, IComparable a, IComparable b) => (v.CompareTo(a) * v.CompareTo(b)).Equals(-1);
 
-        public static T GetRandom<T>(this IEnumerable<T> collection)
-        {
-            return collection.ElementAt(RND.Next(0, collection.Count()));
-        }
+        public static T GetRandom<T>(this IEnumerable<T> collection) => collection.ElementAt(RND.Next(0, collection.Count()));
 
         public static Vector2 GetRandomDirection() => UnityEngine.Random.insideUnitCircle.normalized;
 
@@ -31,22 +25,13 @@ namespace PropPlacer.Runtime
             return v;
         }
 
-        public static Vector2 RotatedCounterClockwise(this Vector2 v, float deg)
-        {
-            return Quaternion.Euler(0, 0, deg) * v;
-        }
+        public static Vector2 RotatedCounterClockwise(this Vector2 v, float deg) => Quaternion.Euler(0, 0, deg) * v;
 
-        public static Vector2 RotatedClockwise(this Vector2 v, float deg)
-        {
-            return v.RotatedCounterClockwise(-deg);
-        }
+        public static Vector2 RotatedClockwise(this Vector2 v, float deg) => v.RotatedCounterClockwise(-deg);
 
-        public static Vector2 RandomVector2Range(float xMin, float xMax, float yMin, float yMax)
-        {
-            return new Vector2(
+        public static Vector2 RandomVector2Range(float xMin, float xMax, float yMin, float yMax) => new Vector2(
                 UnityEngine.Random.Range(xMin, xMax),
                 UnityEngine.Random.Range(yMin, yMax));
-        }
 
         public static T[] ArrayFiledWithFunctionResults<T>(Func<T> function, int count)
         {

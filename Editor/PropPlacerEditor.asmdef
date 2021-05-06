@@ -1,8 +1,8 @@
 {
-    "name": "PropPlacer",
-    "rootNamespace": "PropPlacer",
+    "name": "PropPlacerEditor",
+    "rootNamespace": "PropPlacer.Editor",
     "references": [
-        "GUID:776d03a35f1b52c4a9aed9f56d7b4229"
+        "GUID:35a80724f44413c449d63235af9c3a8e"
     ],
     "includePlatforms": [
         "Editor"

@@ -1,7 +1,7 @@
-﻿using UnityEditor;
+﻿using PropPlacer.Runtime;
+using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
-using PropPlacer.Runtime;
 
 namespace PropPlacer.Editor
 {

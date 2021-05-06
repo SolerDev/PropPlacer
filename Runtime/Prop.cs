@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using PropPlacer;
-using NaughtyAttributes;
-using UnityEditor;
 using UnityEngine;
 
 namespace PropPlacer.Runtime
@@ -13,16 +10,14 @@ namespace PropPlacer.Runtime
     public class Prop : MonoBehaviour, ISpawnable, IReposition, IRenamable, IRotate
     {
         [SerializeField] private float _minDistanceToSameProp = 1f;
-        [SerializeField] private bool _isSurfaceProp = true;
         private Vector2 Position => transform.position;
         private Vector2 PointDirection => transform.up;
 
-        [ShowIf(nameof(_isSurfaceProp))] [Range(0f, 180f)] [SerializeField] private float _surfaceNormalRange = 10f;
-        [ShowIf(nameof(_isSurfaceProp))] [Range(0f, 180f)] [SerializeField] private float _pointDirectionRange = 15f;
+        [Range(0f, 180f)] [SerializeField] private float _surfaceNormalRange = 10f;
+        [Range(0f, 180f)] [SerializeField] private float _pointDirectionRange = 15f;
 
-        public bool IsSurfaceProp => _isSurfaceProp;
-        private bool HasSurfaceNormalRange => IsSurfaceProp && !_surfaceNormalRange.Equals(Vector2.zero);
-        public bool HasPointDirectionRange => IsSurfaceProp && !_pointDirectionRange.Equals(Vector2.zero);
+        private bool HasSurfaceNormalRange => !_surfaceNormalRange.Equals(Vector2.zero);
+        public bool HasPointDirectionRange => !_pointDirectionRange.Equals(Vector2.zero);
 
 
         public event Action OnSpawn;
@@ -86,9 +81,8 @@ namespace PropPlacer.Runtime
 
         public bool CanBePlacedOnNormal(Vector2 surfaceNormal)
         {
-            if (!IsSurfaceProp) return false;
-
-            if (HasSurfaceNormalRange)
+            if (!HasSurfaceNormalRange) return false;
+            else
             {
                 float normalAngle = Vector2.SignedAngle(surfaceNormal, Vector2.right);
 

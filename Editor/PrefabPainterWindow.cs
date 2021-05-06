@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
+﻿using System.Collections.Generic;
+using PropPlacer.Runtime;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
-using PropPlacer.Runtime;
 
 namespace PropPlacer.Editor
 {
@@ -19,10 +15,7 @@ namespace PropPlacer.Editor
         public static bool IS_USING_BRUSH_SETTINGS => BRUSH_SETTINGS != null;
 
         [MenuItem(MENU_PATH + "Painter")]
-        private static void Open()
-        {
-            GetWindow<PrefabPainterWindow>();
-        }
+        private static void Open() => GetWindow<PrefabPainterWindow>();
 
 
         private static int CIRCUNFERENCE_DIVISIONS => Mathf.Max(48, Mathf.RoundToInt(BRUSH_SIZE * 0.85f));

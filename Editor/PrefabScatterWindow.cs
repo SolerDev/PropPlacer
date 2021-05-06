@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using PropPlacer.Runtime;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
-using PropPlacer.Runtime;
 
 namespace PropPlacer.Editor
 {
@@ -64,7 +63,10 @@ namespace PropPlacer.Editor
                 }
             }
 
-            static Vector2 RandomPointInsideExtents(Vector2 area) => Extensions.RandomVector2Range(-area.x, area.x, -area.y, area.y);
+            static Vector2 RandomPointInsideExtents(Vector2 area)
+            {
+                return Extensions.RandomVector2Range(-area.x, area.x, -area.y, area.y);
+            }
         }
 
         private static RaycastHit2D TryHitSurfacePoint(Vector2 p)

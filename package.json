@@ -9,8 +9,5 @@
     "placer"
   ],
   "unityRelease": "0a9",
-  "type": "tool",
-  "dependencies": {
-    "com.dbrizov.naughtyattributes": "2.0.8"
-  }
+  "type": "tool"
 }
