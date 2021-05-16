@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace PropPlacer.Editor
 {
-    public abstract class PrefabPlacerWindow : EditorWindow
+    public abstract class PropPlacerWindow : EditorWindow
     {
         protected const string MENU_PATH = "Window/Prop/";
 
@@ -13,7 +13,7 @@ namespace PropPlacer.Editor
         #region Properties
 
         private static GameObject LAST_CREATED_OBJ;
-        public static PrefabCollection OBJECT_COLLECTION;
+        public static PropCollection OBJECT_COLLECTION;
         public static GameObject OBJECT_TO_SPAWN;
         public static bool IS_USING_OBJECT_COLLECTION => OBJECT_COLLECTION != null;
 
@@ -46,7 +46,7 @@ namespace PropPlacer.Editor
 
             GUILayout.Space(20);
 
-            RotationSettingsGUI();
+            SurfacesSettingsGUI();
 
             GUILayout.Space(20);
         }
@@ -56,11 +56,10 @@ namespace PropPlacer.Editor
             using (new EditorGUILayout.VerticalScope("box"))
             {
                 EditorGUILayout.LabelField("Prefabs to spawn");
-                OBJECT_COLLECTION = (PrefabCollection)EditorGUILayout.ObjectField(OBJECT_COLLECTION, typeof(PrefabCollection), false);
+                OBJECT_COLLECTION = (PropCollection)EditorGUILayout.ObjectField(OBJECT_COLLECTION, typeof(PropCollection), false);
                 if (!IS_USING_OBJECT_COLLECTION)
-                {
                     OBJECT_TO_SPAWN = (GameObject)EditorGUILayout.ObjectField(OBJECT_TO_SPAWN, typeof(GameObject), false);
-                }
+
                 PARENT = (Transform)EditorGUILayout.ObjectField(PARENT, typeof(Transform), true);
             }
         }
@@ -86,11 +85,11 @@ namespace PropPlacer.Editor
             }
         }
 
-        private static void RotationSettingsGUI()
+        private static void SurfacesSettingsGUI()
         {
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Rotation Settings");
+                EditorGUILayout.LabelField("Surface Settings");
 
                 IS_TARGETING_SURFACES =
                     EditorGUILayout.BeginToggleGroup(nameof(IS_TARGETING_SURFACES), IS_TARGETING_SURFACES);
@@ -99,9 +98,14 @@ namespace PropPlacer.Editor
                     && EditorGUILayout.Toggle(nameof(POINT_TO_SURFACE_NORMAL), POINT_TO_SURFACE_NORMAL);
 
                 if (IS_TARGETING_SURFACES)
-                    SURFACES_MASK = EditorGUILayout.MaskField(
-                        InternalEditorUtility.LayerMaskToConcatenatedLayersMask(SURFACES_MASK),
-                        InternalEditorUtility.layers);
+                {
+                    LayerMask tempMask = EditorGUILayout.MaskField(InternalEditorUtility.LayerMaskToConcatenatedLayersMask(SURFACES_MASK), InternalEditorUtility.layers);
+                    SURFACES_MASK = InternalEditorUtility.ConcatenatedLayersMaskToLayerMask(tempMask);
+
+                    //SURFACES_MASK = EditorGUILayout.MaskField(
+                    //    InternalEditorUtility.LayerMaskToConcatenatedLayersMask(SURFACES_MASK), //4, 7, 8
+                    //    InternalEditorUtility.layers);
+                }
 
                 EditorGUILayout.EndToggleGroup();
             }
@@ -133,7 +137,7 @@ namespace PropPlacer.Editor
                 ? (GameObject)PrefabUtility.InstantiatePrefab(OBJECT_COLLECTION.GetRandom(), PARENT)
                 : (GameObject)PrefabUtility.InstantiatePrefab(OBJECT_TO_SPAWN, PARENT);
 
-            Undo.RegisterCreatedObjectUndo(LAST_CREATED_OBJ, "Prefab Brush painted an object");
+            Undo.RegisterCreatedObjectUndo(LAST_CREATED_OBJ, "Prop Brush painted an object");
             return LAST_CREATED_OBJ.GetComponent<Prop>();
         }
 

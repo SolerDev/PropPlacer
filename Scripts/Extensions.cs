@@ -10,6 +10,17 @@ namespace PropPlacer.Runtime
     {
         private static readonly System.Random RND = new System.Random();
 
+        public static Vector2 GetPerimeterPoint(this RaycastHit2D hit)
+        {
+            return hit.collider.ClosestPoint(hit.point);
+        }
+
+        public static RaycastHit2D ToPerimeter(this RaycastHit2D hit)
+        {
+            hit.point = hit.GetPerimeterPoint();
+            return hit;
+        }
+
         public static bool IsBetweenBothExclusive(this IComparable v, IComparable a, IComparable b) => (v.CompareTo(a) * v.CompareTo(b)).Equals(-1);
 
         public static T GetRandom<T>(this IEnumerable<T> collection) => collection.ElementAt(RND.Next(0, collection.Count()));

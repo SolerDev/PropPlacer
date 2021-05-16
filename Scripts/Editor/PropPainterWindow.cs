@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PropPlacer.Editor
 {
-    public class PrefabPainterWindow : PrefabPlacerWindow
+    public class PropPainterWindow : PropPlacerWindow
     {
         protected static readonly List<RaycastHit2D> SURFACES_POINTS_HIT = new List<RaycastHit2D>(64);
 
@@ -15,7 +15,7 @@ namespace PropPlacer.Editor
         public static bool IS_USING_BRUSH_SETTINGS => BRUSH_SETTINGS != null;
 
         [MenuItem(MENU_PATH + "Painter")]
-        private static void Open() => GetWindow<PrefabPainterWindow>();
+        private static void Open() => GetWindow<PropPainterWindow>();
 
 
         private static int CIRCUNFERENCE_DIVISIONS => Mathf.Max(48, Mathf.RoundToInt(BRUSH_SIZE * 0.85f));
@@ -84,7 +84,7 @@ namespace PropPlacer.Editor
 
 
                         if (surfacePointHit)
-                            SURFACES_POINTS_HIT.Add(surfacePointHit);
+                            SURFACES_POINTS_HIT.Add(surfacePointHit.ToPerimeter());
                     }
 
                     if (IS_PAINTING && SURFACES_POINTS_HIT.Count > 0)

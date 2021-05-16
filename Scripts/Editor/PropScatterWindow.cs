@@ -7,10 +7,10 @@ using UnityEngine;
 
 namespace PropPlacer.Editor
 {
-    public class PrefabScatterWindow : PrefabPlacerWindow
+    public class PropScatterWindow : PropPlacerWindow
     {
         [MenuItem(MENU_PATH + "Scatter")]
-        private static void Open() => GetWindow<PrefabScatterWindow>();
+        private static void Open() => GetWindow<PropScatterWindow>();
 
         private static Collider2D COLLIDER;
         private static int POINTS_TO_ATTEMPT_COUNT = 300;
@@ -55,11 +55,15 @@ namespace PropPlacer.Editor
                         TrySpawnProp(p);
                 else
                 {
-                    IEnumerable<RaycastHit2D> hits = points.Select(p => TryHitSurfacePoint(p))
-                                                           .Where(hit => hit && COLLIDER.OverlapPoint(hit.point));
+                    IList<RaycastHit2D> hits = points.Select(p => TryHitSurfacePoint(p))
+                                                     .Where(hit => hit && COLLIDER.OverlapPoint(hit.point))
+                                                     .ToList();
 
-                    foreach (RaycastHit2D hit in hits)
-                        TrySpawnProp(hit.point, hit.normal);
+                    for (int i = 0; i < hits.Count; i++)
+                    {
+                        RaycastHit2D hit = hits[i].ToPerimeter();
+                        TrySpawnProp(hit.point, hit.point);
+                    }
                 }
             }
 

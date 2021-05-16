@@ -4,7 +4,7 @@ using UnityEngine;
 namespace PropPlacer.Editor
 {
     [CreateAssetMenu(fileName = "Collection", menuName = "PrefabBrush/Collection")]
-    public class PrefabCollection : ScriptableObject
+    public class PropCollection : ScriptableObject
     {
         private static readonly System.Random RND = new System.Random();
 
