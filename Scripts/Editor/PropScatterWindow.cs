@@ -12,21 +12,36 @@ namespace PropPlacer.Editor
         [MenuItem(MENU_PATH + "Scatter")]
         private static void Open() => GetWindow<PropScatterWindow>();
 
-        private static Collider2D COLLIDER;
+        private static Collider2D PROP_AREA_COLLIDER;
         private static int POINTS_TO_ATTEMPT_COUNT = 300;
-        private const float SURFACE_DISTANCE = 10f;
+
+        [Range(0f, 1f)]
+        private static float LERP_T = 0f;
 
         private void OnEnable() => SceneView.duringSceneGui += DuringSceneGUI;
         private void OnDisable() => SceneView.duringSceneGui -= DuringSceneGUI;
 
         private void DuringSceneGUI(SceneView obj)
         {
+            _sceneView = obj;
             if (!InternalEditorUtility.isApplicationActive) return;
 
-            if (COLLIDER != null)
+            if (PROP_AREA_COLLIDER != null)
             {
                 Handles.color = Color.yellow;
-                Handles.DrawWireCube(COLLIDER.bounds.center, COLLIDER.bounds.extents * 2f);
+                Handles.DrawWireCube(PROP_AREA_COLLIDER.bounds.center, PROP_AREA_COLLIDER.bounds.extents * 2f);
+
+                Vector2[] points = default;
+                if (PROP_AREA_COLLIDER is PolygonCollider2D polyColl)
+                    points = polyColl.points;
+                else if (PROP_AREA_COLLIDER is EdgeCollider2D edgeColl)
+                    points = edgeColl.points;
+
+                if (points != null)
+                {
+                    Vector2 lerpedPoint = points.Lerp(LERP_T) + (Vector2)PROP_AREA_COLLIDER.transform.position;
+                    Handles.DrawWireDisc(lerpedPoint, Vector3.forward, 1f, 2f);
+                }
             }
         }
 
@@ -44,26 +59,23 @@ namespace PropPlacer.Editor
 
         private static void ScatterButton()
         {
-            if (COLLIDER != null && GUILayout.Button("Scatter"))
+            if (PROP_AREA_COLLIDER != null && GUILayout.Button("Scatter"))
             {
-                Bounds bounds = COLLIDER.bounds;
+                Bounds bounds = PROP_AREA_COLLIDER.bounds;
                 Vector2[] points = Extensions.ArrayFiledWithFunctionResults(() =>
                     RandomPointInsideExtents(bounds.extents * 2f), POINTS_TO_ATTEMPT_COUNT);
 
                 if (!IS_TARGETING_SURFACES)
-                    foreach (Vector2 p in points.Where(point => COLLIDER.OverlapPoint(point)))
+                    foreach (Vector2 p in points.Where(point => PROP_AREA_COLLIDER.OverlapPoint(point)))
                         TrySpawnProp(p);
                 else
                 {
-                    IList<RaycastHit2D> hits = points.Select(p => TryHitSurfacePoint(p))
-                                                     .Where(hit => hit && COLLIDER.OverlapPoint(hit.point))
-                                                     .ToList();
+                    //voltar daqui > trocar forma de captação de pontos
+                    IEnumerable<RaycastHit2D> hits = points.Select(p => TryHitSurfacePoint(p))
+                                                           .Where(hit => hit && PROP_AREA_COLLIDER.OverlapPoint(hit.point));
 
-                    for (int i = 0; i < hits.Count; i++)
-                    {
-                        RaycastHit2D hit = hits[i].ToPerimeter();
-                        TrySpawnProp(hit.point, hit.point);
-                    }
+                    foreach (RaycastHit2D hit in hits)
+                        TrySpawnProp(hit.point, hit.normal);
                 }
             }
 
@@ -75,6 +87,9 @@ namespace PropPlacer.Editor
 
         private static RaycastHit2D TryHitSurfacePoint(Vector2 p)
         {
+            bool queriesStartInColliders = Physics2D.queriesStartInColliders;
+            Physics2D.queriesStartInColliders = false;
+
             int attempts = 0;
             int maxAttempts = 12;
             float rotationPerAttempt = 360 / maxAttempts;
@@ -84,10 +99,12 @@ namespace PropPlacer.Editor
 
             do
             {
-                hit = Physics2D.Raycast(p, initialRayDirection.RotatedClockwise(attempts * rotationPerAttempt), SURFACE_DISTANCE, SURFACES_MASK);
+                hit = Physics2D.Raycast(p, initialRayDirection.RotatedClockwise(attempts * rotationPerAttempt), Mathf.Infinity, SURFACES_MASK);
                 attempts++;
 
-            } while (attempts < maxAttempts && (!hit || hit.collider.Equals(COLLIDER) || !COLLIDER.OverlapPoint(hit.point)));
+            } while (attempts < maxAttempts && (!hit || hit.collider.Equals(PROP_AREA_COLLIDER) || !PROP_AREA_COLLIDER.OverlapPoint(hit.point)));
+
+            Physics2D.queriesStartInColliders = queriesStartInColliders;
 
             return hit;
         }
@@ -98,11 +115,19 @@ namespace PropPlacer.Editor
             {
                 EditorGUILayout.LabelField("Scatter Settings");
 
-                COLLIDER = (Collider2D)EditorGUILayout.ObjectField(COLLIDER, typeof(Collider2D), true);
-                if (COLLIDER != null) Repaint();
+                PROP_AREA_COLLIDER = (Collider2D)EditorGUILayout.ObjectField(PROP_AREA_COLLIDER, typeof(Collider2D), true);
+                if (PROP_AREA_COLLIDER != null) Repaint();
 
                 POINTS_TO_ATTEMPT_COUNT = EditorGUILayout.IntField(POINTS_TO_ATTEMPT_COUNT);
+
+                float prevLerpT = LERP_T;
+                LERP_T = EditorGUILayout.Slider(LERP_T, 0f, 1f);
+                if (!LERP_T.Equals(prevLerpT))
+                {
+                    _sceneView.Repaint();
+                }
             }
         }
+        private SceneView _sceneView;
     }
 }

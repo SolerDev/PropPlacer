@@ -79,12 +79,12 @@ namespace PropPlacer.Editor
                         Handles.DrawLine(brushPosition, brushPosition + dir * BRUSH_SIZE);
 
                         RaycastHit2D surfacePointHit = IS_TARGETING_SURFACES
-                            ? Physics2D.Raycast(brushPosition, dir, BRUSH_SIZE, SURFACES_MASK)
+                            ? GetSurfacePoint(brushPosition, dir)
                             : Physics2D.Raycast(brushPosition, dir, BRUSH_SIZE);
 
 
                         if (surfacePointHit)
-                            SURFACES_POINTS_HIT.Add(surfacePointHit.ToPerimeter());
+                            SURFACES_POINTS_HIT.Add(surfacePointHit);
                     }
 
                     if (IS_PAINTING && SURFACES_POINTS_HIT.Count > 0)
@@ -105,6 +105,16 @@ namespace PropPlacer.Editor
                 Handles.DrawWireDisc(brushPosition, Vector3.forward, BRUSH_SIZE);
                 foreach (RaycastHit2D hit in SURFACES_POINTS_HIT)
                     Handles.DrawWireDisc(hit.point, Vector3.forward, 0.25f);
+            }
+
+            static RaycastHit2D GetSurfacePoint(Vector2 brushPosition, Vector2 dir)
+            {
+                bool queriesStartInColliders = Physics2D.queriesStartInColliders;
+                Physics2D.queriesStartInColliders = false;
+
+                return Physics2D.Raycast(brushPosition, dir, BRUSH_SIZE, SURFACES_MASK);
+
+                Physics2D.queriesStartInColliders = queriesStartInColliders;
             }
         }
 
