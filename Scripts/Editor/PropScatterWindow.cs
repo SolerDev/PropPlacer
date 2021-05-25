@@ -18,6 +18,8 @@ namespace PropPlacer.Editor
         [Range(0f, 1f)]
         private static float LERP_T = 0f;
 
+        private static float POINT_EXPANSION = 0f;
+
         private void OnEnable() => SceneView.duringSceneGui += DuringSceneGUI;
         private void OnDisable() => SceneView.duringSceneGui -= DuringSceneGUI;
 
@@ -31,15 +33,24 @@ namespace PropPlacer.Editor
                 Handles.color = Color.yellow;
                 Handles.DrawWireCube(PROP_AREA_COLLIDER.bounds.center, PROP_AREA_COLLIDER.bounds.extents * 2f);
 
-                Vector2[] points = default;
+                IEnumerable<Vector2> points = null;
                 if (PROP_AREA_COLLIDER is PolygonCollider2D polyColl)
                     points = polyColl.points;
                 else if (PROP_AREA_COLLIDER is EdgeCollider2D edgeColl)
                     points = edgeColl.points;
-
+                else if (PROP_AREA_COLLIDER is BoxCollider2D boxColl)
+                    points = boxColl.bounds.ToPoints();
                 if (points != null)
                 {
-                    Vector2 lerpedPoint = points.Lerp(LERP_T) + (Vector2)PROP_AREA_COLLIDER.transform.position;
+                    IList<Vector2> pointList = points.ExpandedBy(POINT_EXPANSION).ToList();
+                    for (int i = 0; i < pointList.Count; i++)
+                        pointList[i] += (Vector2)PROP_AREA_COLLIDER.transform.position;
+                    for (int i = 0; i < pointList.Count; i++)
+                        Debug.DrawLine(pointList.ElementAt(i), pointList.ElementAfter(i), Color.yellow);
+
+                    Vector2 lerpedPoint = pointList.Lerp(LERP_T,
+                                                         LerpEndType.Closed,
+                                                         LerpOvershootType.Cyclic);
                     Handles.DrawWireDisc(lerpedPoint, Vector3.forward, 1f, 2f);
                 }
             }
@@ -120,12 +131,12 @@ namespace PropPlacer.Editor
 
                 POINTS_TO_ATTEMPT_COUNT = EditorGUILayout.IntField(POINTS_TO_ATTEMPT_COUNT);
 
+                float prevPointExpansion = POINT_EXPANSION;
+                POINT_EXPANSION = EditorGUILayout.FloatField(POINT_EXPANSION);
                 float prevLerpT = LERP_T;
                 LERP_T = EditorGUILayout.Slider(LERP_T, 0f, 1f);
-                if (!LERP_T.Equals(prevLerpT))
-                {
+                if (!LERP_T.Equals(prevLerpT) || !POINT_EXPANSION.Equals(prevPointExpansion))
                     _sceneView.Repaint();
-                }
             }
         }
         private SceneView _sceneView;

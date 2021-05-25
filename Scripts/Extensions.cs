@@ -6,31 +6,72 @@ using UnityEngine;
 
 namespace PropPlacer.Runtime
 {
+    public enum LerpEndType
+    {
+        OpenEnded,
+        Closed
+    }
+    public enum LerpOvershootType
+    {
+        Cyclic,
+        PingPong
+    }
+
     public static class Extensions
     {
         private static readonly System.Random RND = new System.Random();
 
-        public static T ElementBefore<T>(this IEnumerable<T> collection, int index)
+        public static Vector2[] ToPoints(this Bounds bounds)
         {
-            return index.Equals(0) ? collection.Last() : collection.ElementAt(index - 1);
+            Vector2[] points = new Vector2[4];
+            points[0] = new Vector2(-bounds.extents.x, -bounds.extents.y);
+            points[1] = new Vector2(bounds.extents.x, -bounds.extents.y);
+            points[2] = new Vector2(bounds.extents.x, bounds.extents.y);
+            points[3] = new Vector2(-bounds.extents.x, bounds.extents.y);
+
+            return points;
         }
 
-        public static T ElementAfter<T>(this IEnumerable<T> collection, int index)
+        public static IEnumerable<Vector2> ExpandedBy(this IEnumerable<Vector2> points, float expansion)
         {
-            return index.Equals(collection.Count() - 1) ? collection.First() : collection.ElementAt(index + 1);
+            IList<Vector2> pointList = points.ToList();
+            Path[] paths = new Path[pointList.Count];
+            for (int i = 0; i < pointList.Count; i++)
+            {
+                Vector2 start = points.ElementBefore(i);
+                Vector2 middle = points.ElementAt(i);
+                Vector2 end = points.ElementAfter(i);
+
+                paths[i] = new Path(start, middle, end);
+            }
+
+            for (int i = 0; i < pointList.Count; i++)
+                pointList[i] = paths[i].Expanded(expansion);
+
+            return pointList;
         }
 
-        public static Vector2 Lerp(this IEnumerable<Vector2> points, float t)
+        public static T ElementBefore<T>(this IEnumerable<T> collection, int index) => index.Equals(0) ? collection.Last() : collection.ElementAt(index - 1);
+
+        public static T ElementAfter<T>(this IEnumerable<T> collection, int index) => index.Equals(collection.Count() - 1) ? collection.First() : collection.ElementAt(index + 1);
+
+        public static Vector2 Lerp(this IEnumerable<Vector2> points, float t, LerpEndType lerpEndType, LerpOvershootType lerpOvershootType)
         {
+            t %= 1;
             int pointCount = points.Count();
 
             List<Edge> edges = new List<Edge>(pointCount);
             for (int i = 0; i < pointCount; i++)
                 edges.Add((points.ElementAt(i), points.ElementAfter(i)));
 
+            if (lerpEndType.Equals(LerpEndType.OpenEnded))
+                edges.Remove(edges.Last());
+
+            if (lerpOvershootType.Equals(LerpOvershootType.PingPong))
+                t *= t % 1 > 0 ? -1 : 1;
+
             float totalEdgeLength = edges.Sum(edge => edge.Length);
             float targetLength = totalEdgeLength * t;
-
             return edges.MapLengthToMatchingEdgePoint(targetLength);
         }
 
@@ -139,9 +180,9 @@ namespace PropPlacer.Runtime
 
         public void Deconstruct(out Vector2 pointA, out Vector2 pointB, out float length)
         {
-            pointA = this.Start;
-            pointB = this.End;
-            length = this.Length;
+            pointA = Start;
+            pointB = End;
+            length = Length;
         }
 
         public static implicit operator (Vector2 pointA, Vector2 pointB, float length)(Edge value)
@@ -152,6 +193,67 @@ namespace PropPlacer.Runtime
         public static implicit operator Edge((Vector2 pointA, Vector2 pointB) value)
         {
             return new Edge(value.pointA, value.pointB);
+        }
+    }
+
+    internal struct Path
+    {
+        public Vector2 Start;
+        public Vector2 Middle;
+        public Vector2 End;
+
+        private Vector2 _startEdge;
+        private Vector2 _endEdge;
+        private Vector2 _startNormal;
+        private Vector2 _endNormal;
+
+
+        public Vector2 Expanded(float expansion)
+        {
+            Vector2 midNormal = (_startNormal + _endNormal).normalized;
+
+            return Middle + midNormal * expansion;
+        }
+
+        public Path(Vector2 start, Vector2 middle, Vector2 end)
+        {
+            Start = start;
+            Middle = middle;
+            End = end;
+
+            _startEdge = start - middle;
+            _endEdge = middle - end;
+
+            _startNormal = Vector2.Perpendicular(_startEdge).normalized;
+            _endNormal = Vector2.Perpendicular(_endEdge).normalized;
+        }
+
+        public override bool Equals(object obj) => obj is Path other && Start.Equals(other.Start) && Middle.Equals(other.Middle) && End.Equals(other.End);
+
+        public override int GetHashCode()
+        {
+            int hashCode = -865580495;
+            hashCode = hashCode * -1521134295 + Start.GetHashCode();
+            hashCode = hashCode * -1521134295 + Middle.GetHashCode();
+            hashCode = hashCode * -1521134295 + End.GetHashCode();
+            return hashCode;
+        }
+
+        public void Deconstruct(out Vector2 start, out Vector2 middle, out Vector2 end)
+        {
+            start = Start;
+            middle = Middle;
+            end = End;
+        }
+
+        public static implicit operator (Vector2 Start, Vector2 Middle, Vector2 End)(Path value)
+        {
+            return (value.Start, value.Middle, value.End);
+        }
+
+        public static implicit operator Path((Vector2 Start, Vector2 Middle, Vector2 End) value)
+        {
+            return new Path(value.Start, value.Middle, value.End);
         }
     }
 }
