@@ -13,8 +13,8 @@ namespace PropPlacer.Runtime
         private Vector2 Position => transform.position;
         private Vector2 PointDirection => transform.up;
 
-        [Range(0f, 180f)] [SerializeField] private float _surfaceNormalRange = 10f;
-        [Range(0f, 180f)] [SerializeField] private float _pointDirectionRange = 15f;
+        [Range(0f, 179f)] [SerializeField] private float _surfaceNormalRange = 10f;
+        [Range(0f, 179f)] [SerializeField] private float _pointDirectionRange = 15f;
 
         private bool HasSurfaceNormalRange => !_surfaceNormalRange.Equals(Vector2.zero);
         public bool HasPointDirectionRange => !_pointDirectionRange.Equals(Vector2.zero);

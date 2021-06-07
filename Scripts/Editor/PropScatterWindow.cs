@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using PropPlacer.Runtime;
 using UnityEditor;
 using UnityEditorInternal;
@@ -14,18 +15,19 @@ namespace PropPlacer.Editor
 
         private static Collider2D PROP_AREA_COLLIDER;
         private static int POINTS_TO_ATTEMPT_COUNT = 300;
+        public static Vector2 COLLIDER_CENTER => PROP_AREA_COLLIDER.bounds.center;
 
         [Range(0f, 1f)]
         private static float LERP_T = 0f;
 
-        private static float POINT_EXPANSION = 0f;
+        private static float POINT_EXPANSION => PLACE_INSIDE ? 1f : -1f;
+        private static bool PLACE_INSIDE = false;
 
         private void OnEnable() => SceneView.duringSceneGui += DuringSceneGUI;
         private void OnDisable() => SceneView.duringSceneGui -= DuringSceneGUI;
 
         private void DuringSceneGUI(SceneView obj)
         {
-            _sceneView = obj;
             if (!InternalEditorUtility.isApplicationActive) return;
 
             if (PROP_AREA_COLLIDER != null)
@@ -33,24 +35,13 @@ namespace PropPlacer.Editor
                 Handles.color = Color.yellow;
                 Handles.DrawWireCube(PROP_AREA_COLLIDER.bounds.center, PROP_AREA_COLLIDER.bounds.extents * 2f);
 
-                IEnumerable<Vector2> points = null;
-                if (PROP_AREA_COLLIDER is PolygonCollider2D polyColl)
-                    points = polyColl.points;
-                else if (PROP_AREA_COLLIDER is EdgeCollider2D edgeColl)
-                    points = edgeColl.points;
-                else if (PROP_AREA_COLLIDER is BoxCollider2D boxColl)
-                    points = boxColl.bounds.ToPoints();
-                if (points != null)
+                if (Extensions.TryGetColliderPoints(PROP_AREA_COLLIDER, out IList<Vector2> originalPoints, (Vector2)PROP_AREA_COLLIDER.transform.position))
                 {
-                    IList<Vector2> pointList = points.ExpandedBy(POINT_EXPANSION).ToList();
-                    for (int i = 0; i < pointList.Count; i++)
-                        pointList[i] += (Vector2)PROP_AREA_COLLIDER.transform.position;
-                    for (int i = 0; i < pointList.Count; i++)
-                        Debug.DrawLine(pointList.ElementAt(i), pointList.ElementAfter(i), Color.yellow);
+                    IEnumerable<Vector2> expandedPoints = originalPoints.ExpandedBy(POINT_EXPANSION);
+                    Vector2 lerpedPoint = expandedPoints.Lerp(LERP_T, LerpEndType.Closed, LerpOvershootType.Cyclic);
 
-                    Vector2 lerpedPoint = pointList.Lerp(LERP_T,
-                                                         LerpEndType.Closed,
-                                                         LerpOvershootType.Cyclic);
+                    for (int i = 0; i < expandedPoints.Count(); i++)
+                        Debug.DrawLine(expandedPoints.ElementAt(i), expandedPoints.ElementAfter(i), Color.yellow);
                     Handles.DrawWireDisc(lerpedPoint, Vector3.forward, 1f, 2f);
                 }
             }
@@ -72,18 +63,36 @@ namespace PropPlacer.Editor
         {
             if (PROP_AREA_COLLIDER != null && GUILayout.Button("Scatter"))
             {
-                Bounds bounds = PROP_AREA_COLLIDER.bounds;
-                Vector2[] points = Extensions.ArrayFiledWithFunctionResults(() =>
-                    RandomPointInsideExtents(bounds.extents * 2f), POINTS_TO_ATTEMPT_COUNT);
-
                 if (!IS_TARGETING_SURFACES)
+                {
+                    Bounds bounds = PROP_AREA_COLLIDER.bounds;
+                    Vector2[] points = Extensions.ArrayFiledWithFunctionResults(() =>
+                        RandomPointInsideExtents(bounds.extents * 2f), POINTS_TO_ATTEMPT_COUNT);
+
                     foreach (Vector2 p in points.Where(point => PROP_AREA_COLLIDER.OverlapPoint(point)))
                         TrySpawnProp(p);
-                else
+                }
+                else if (Extensions.TryGetColliderPoints(PROP_AREA_COLLIDER, out IList<Vector2> originalPoints, PROP_AREA_COLLIDER.transform.position))
                 {
-                    //voltar daqui > trocar forma de captação de pontos
-                    IEnumerable<RaycastHit2D> hits = points.Select(p => TryHitSurfacePoint(p))
-                                                           .Where(hit => hit && PROP_AREA_COLLIDER.OverlapPoint(hit.point));
+                    IEnumerable<Vector2> expandedPoints = originalPoints.ExpandedBy(POINT_EXPANSION);
+
+                    float t = 0f;
+                    float perTry = 1f / POINTS_TO_ATTEMPT_COUNT;
+                    IList<RaycastHit2D> hits = new RaycastHit2D[POINTS_TO_ATTEMPT_COUNT];
+                    Vector2 originalPoint;
+                    Vector2 expandedPoint;
+
+                    for (int i = 0; i < POINTS_TO_ATTEMPT_COUNT; i++)
+                    {
+                        originalPoint = originalPoints.Lerp(t, LerpEndType.Closed, LerpOvershootType.Cyclic);
+                        expandedPoint = expandedPoints.Lerp(t, LerpEndType.Closed, LerpOvershootType.Cyclic);
+                        Vector2 dir = originalPoint - expandedPoint;
+
+                        hits[i] = Physics2D.Raycast(expandedPoint, dir, dir.magnitude * 2f);
+                        t += perTry;
+
+                        Debug.DrawLine(originalPoint, expandedPoint, Color.magenta, 5f);
+                    }
 
                     foreach (RaycastHit2D hit in hits)
                         TrySpawnProp(hit.point, hit.normal);
@@ -93,6 +102,14 @@ namespace PropPlacer.Editor
             Vector2 RandomPointInsideExtents(Vector2 area)
             {
                 return Extensions.RandomVector2Range(-area.x, area.x, -area.y, area.y);
+            }
+
+            Vector2 GetDirectionFromOldToNew(Vector2 point)
+            {
+                float dir = Mathf.Sign(-POINT_EXPANSION);
+                Vector2 final = (COLLIDER_CENTER - point).normalized * dir;
+
+                return final;
             }
         }
 
@@ -131,14 +148,8 @@ namespace PropPlacer.Editor
 
                 POINTS_TO_ATTEMPT_COUNT = EditorGUILayout.IntField(POINTS_TO_ATTEMPT_COUNT);
 
-                float prevPointExpansion = POINT_EXPANSION;
-                POINT_EXPANSION = EditorGUILayout.FloatField(POINT_EXPANSION);
-                float prevLerpT = LERP_T;
-                LERP_T = EditorGUILayout.Slider(LERP_T, 0f, 1f);
-                if (!LERP_T.Equals(prevLerpT) || !POINT_EXPANSION.Equals(prevPointExpansion))
-                    _sceneView.Repaint();
+                PLACE_INSIDE = EditorGUILayout.Toggle("InsideCollider", PLACE_INSIDE);
             }
         }
-        private SceneView _sceneView;
     }
 }

@@ -149,6 +149,27 @@ namespace PropPlacer.Runtime
             return ReferenceEquals(prefabA, prefabB);
         }
 
+
+        public static bool TryGetColliderPoints(Collider2D collider, out IList<Vector2> points, Vector2? add = null)
+        {
+            points = null;
+
+            if (collider is PolygonCollider2D polyColl)
+                points = polyColl.points;
+            else if (collider is EdgeCollider2D edgeColl)
+                points = edgeColl.points;
+            else if (collider is BoxCollider2D boxColl)
+                points = boxColl.bounds.ToPoints();
+
+            if (points == null) return false;
+
+            if (add.HasValue)
+                for (int i = 0; i < points.Count; i++)
+                    points[i] += add.Value;
+
+            return true;
+        }
+
     }
 
     internal struct Edge
