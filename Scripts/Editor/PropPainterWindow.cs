@@ -107,14 +107,16 @@ namespace PropPlacer.Editor
                     Handles.DrawWireDisc(hit.point, Vector3.forward, 0.25f);
             }
 
-            static RaycastHit2D GetSurfacePoint(Vector2 brushPosition, Vector2 dir)
+            RaycastHit2D GetSurfacePoint(Vector2 brushPosition, Vector2 dir)
             {
                 bool queriesStartInColliders = Physics2D.queriesStartInColliders;
                 Physics2D.queriesStartInColliders = false;
 
-                return Physics2D.Raycast(brushPosition, dir, BRUSH_SIZE, SURFACES_MASK);
+                RaycastHit2D hit = Physics2D.Raycast(brushPosition, dir, BRUSH_SIZE, SURFACES_MASK);
 
                 Physics2D.queriesStartInColliders = queriesStartInColliders;
+
+                return hit;
             }
         }
 
