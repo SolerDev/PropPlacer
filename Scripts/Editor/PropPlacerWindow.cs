@@ -118,7 +118,7 @@ namespace PropPlacer.Editor
         {
             Prop prop = GetProp();
 
-            if (prop.HasDuplicateWithinMinDistance(position))
+            if (!prop.IsFarEnoughtFromOtherProps(position))
                 return DisposeOfLastCreatedProp();
             if (surfaceNormal.HasValue && !prop.CanBePlacedOnNormal(surfaceNormal.Value))
                 return DisposeOfLastCreatedProp();

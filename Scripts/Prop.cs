@@ -9,7 +9,8 @@ namespace PropPlacer.Runtime
     [ExecuteAlways]
     public class Prop : MonoBehaviour, ISpawnable, IReposition, IRenamable, IRotate
     {
-        [SerializeField] private float _minDistanceToSameProp = 1f;
+        [SerializeField] private float _minDistanceToSameProp = 2f;
+        [SerializeField] private float _minDistanceToDifferentProp = 0.75f;
         private Vector2 Position => transform.position;
         private Vector2 PointDirection => transform.up;
 
@@ -17,7 +18,8 @@ namespace PropPlacer.Runtime
         [Range(0f, 179f)] [SerializeField] private float _pointDirectionRange = 15f;
 
         private bool HasSurfaceNormalRange => !_surfaceNormalRange.Equals(Vector2.zero);
-        public bool HasPointDirectionRange => !_pointDirectionRange.Equals(Vector2.zero);
+        private bool HasPointDirectionRange => !_pointDirectionRange.Equals(Vector2.zero);
+        public float MinDistanceToDifferentProp => _minDistanceToDifferentProp;
 
 
         public event Action OnSpawn;
@@ -44,10 +46,10 @@ namespace PropPlacer.Runtime
             OnRotate?.Invoke(Vector2.up);
         }
 
-        private static readonly List<GameObject> PROP_OBJS = new List<GameObject>();
+        private static readonly List<Prop> PROP_OBJS = new List<Prop>();
         public void Spawn() => OnSpawn?.Invoke();
-        private void OnEnable() => PROP_OBJS.Add(gameObject);
-        private void OnDisable() => PROP_OBJS.Remove(gameObject);
+        private void OnEnable() => PROP_OBJS.Add(this);
+        private void OnDisable() => PROP_OBJS.Remove(this);
 
 
 
@@ -105,15 +107,24 @@ namespace PropPlacer.Runtime
             return true;
         }
 
-        public bool HasDuplicateWithinMinDistance(Vector2 point)
+        public bool IsFarEnoughtFromOtherProps(Vector2 position)
         {
-            IEnumerable<GameObject> nearbyProps = PROP_OBJS.Where(obj =>
-            {
-                Vector2 distanceToProp = (Vector2)obj.transform.position - point;
-                return Vector2.SqrMagnitude(distanceToProp) < _minDistanceToSameProp * _minDistanceToSameProp;
-            });
+            var propsOfSameType = PROP_OBJS.Where(propObj => propObj.gameObject.IsOfSamePrefabAs(gameObject));
+            var propsOfDifferentType = PROP_OBJS.Except(propsOfSameType);
 
-            return nearbyProps.Any(propObj => propObj.IsOfSamePrefabAs(gameObject));
+            bool isFarEnoughtFromSameType = !propsOfSameType.Any(p => IsClosertThan(p, _minDistanceToSameProp));
+            bool isFarEnoughtFromDifferentType = !propsOfDifferentType.Any(p =>
+            IsClosertThan(p, _minDistanceToDifferentProp) ||
+            IsClosertThan(p, p.MinDistanceToDifferentProp));
+
+            return isFarEnoughtFromSameType && isFarEnoughtFromDifferentType;
+
+
+            bool IsClosertThan(Prop other, float distance)
+            {
+                Vector2 distanceToProp = (Vector2)other.transform.position - position;
+                return Vector2.SqrMagnitude(distanceToProp) < distance * distance;
+            }
         }
 
         public void Rotate(Vector2? surfaceNormal)

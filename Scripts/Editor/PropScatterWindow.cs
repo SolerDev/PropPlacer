@@ -76,20 +76,19 @@ namespace PropPlacer.Editor
                 {
                     IEnumerable<Vector2> expandedPoints = originalPoints.ExpandedBy(POINT_EXPANSION);
 
-                    float t = 0f;
-                    float perTry = 1f / POINTS_TO_ATTEMPT_COUNT;
                     IList<RaycastHit2D> hits = new RaycastHit2D[POINTS_TO_ATTEMPT_COUNT];
                     Vector2 originalPoint;
                     Vector2 expandedPoint;
+                    float t;
 
                     for (int i = 0; i < POINTS_TO_ATTEMPT_COUNT; i++)
                     {
+                        t = Random.value;
                         originalPoint = originalPoints.Lerp(t, LerpEndType.Closed, LerpOvershootType.Cyclic);
                         expandedPoint = expandedPoints.Lerp(t, LerpEndType.Closed, LerpOvershootType.Cyclic);
                         Vector2 dir = originalPoint - expandedPoint;
 
                         hits[i] = Physics2D.Raycast(expandedPoint, dir, dir.magnitude * 2f);
-                        t += perTry;
 
                         Debug.DrawLine(originalPoint, expandedPoint, Color.magenta, 5f);
                     }
