@@ -42,7 +42,7 @@ namespace PropPlacer.Editor
 
                     for (int i = 0; i < expandedPoints.Count(); i++)
                         Debug.DrawLine(expandedPoints.ElementAt(i), expandedPoints.ElementAfter(i), Color.yellow);
-                    Handles.DrawWireDisc(lerpedPoint, Vector3.forward, 1f, 2f);
+                    Handles.DrawWireDisc(lerpedPoint, Vector3.forward, 1f);
                 }
             }
         }
