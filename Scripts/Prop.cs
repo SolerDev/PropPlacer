@@ -17,8 +17,8 @@ namespace PropPlacer.Runtime
         [Range(0f, 179f)] [SerializeField] private float _surfaceNormalRange = 10f;
         [Range(0f, 179f)] [SerializeField] private float _pointDirectionRange = 15f;
 
-        private bool HasSurfaceNormalRange => !_surfaceNormalRange.Equals(Vector2.zero);
-        private bool HasPointDirectionRange => !_pointDirectionRange.Equals(Vector2.zero);
+        private bool HasSurfaceNormalRange => !_surfaceNormalRange.Equals(0f);
+        private bool HasPointDirectionRange => !_pointDirectionRange.Equals(0f);
         public float MinDistanceToDifferentProp => _minDistanceToDifferentProp;
 
 
@@ -84,27 +84,23 @@ namespace PropPlacer.Runtime
         public bool CanBePlacedOnNormal(Vector2 surfaceNormal)
         {
             if (!HasSurfaceNormalRange) return false;
-            else
+
+
+            float dotRange = Vector2.Dot(PointDirection, PointDirection.RotatedClockwise(_surfaceNormalRange));
+            float actualDot = Vector2.Dot(PointDirection, surfaceNormal);
+
+            if (actualDot >= dotRange)
+                return true;
+
+            if (!PointDirection.x.Equals(0f))
             {
-                float normalAngle = Vector2.SignedAngle(surfaceNormal, Vector2.right);
-
-                float minNormalAngle = Vector2.SignedAngle(PointDirection.RotatedClockwise(_surfaceNormalRange), Vector2.right);
-                float maxNormalAngle = Vector2.SignedAngle(PointDirection.RotatedClockwise(-_surfaceNormalRange), Vector2.right);
-
-                if (!normalAngle.IsBetweenBothExclusive(minNormalAngle, maxNormalAngle))
-                {
-                    normalAngle = Vector2.SignedAngle(surfaceNormal, Vector2.left);
-                    Vector2 reflectedPointDirection = Vector2.Reflect(PointDirection, Vector2.up);
-                    minNormalAngle = Vector2.SignedAngle(reflectedPointDirection.RotatedClockwise(_surfaceNormalRange), Vector2.right);
-                    maxNormalAngle = Vector2.SignedAngle(reflectedPointDirection.RotatedClockwise(-_surfaceNormalRange), Vector2.right);
-
-                    if (!normalAngle.IsBetweenBothExclusive(minNormalAngle, maxNormalAngle))
-                        return false;
-                }
+                Vector2 mirroredAngle = PointDirection;
+                mirroredAngle.x *= -1f;
+                actualDot = Vector2.Dot(mirroredAngle, surfaceNormal);
+                return actualDot >= dotRange;
             }
 
-
-            return true;
+            return false;
         }
 
         public bool IsFarEnoughtFromOtherProps(Vector2 position)
@@ -127,24 +123,25 @@ namespace PropPlacer.Runtime
             }
         }
 
-        public void Rotate(Vector2? surfaceNormal)
+        public void PointTo(Vector2? surfaceNormal)
         {
-            Vector2 newRotation = GetValidPointDirection();
-            if (surfaceNormal.HasValue)
-                newRotation.x *= Mathf.Sign(surfaceNormal.Value.x);
+            Vector2 targetDirection = surfaceNormal.HasValue //todo:coalesce expression when C#8 in project
+                ? surfaceNormal.Value
+                : Vector2.zero;
 
-            transform.up = newRotation;
+            targetDirection.RotatedClockwise(Vector2.SignedAngle(PointDirection, Vector2.right));
+
+            float offsetRotation = GetValidPointDirectionOffset();
+            Vector2 finalRotation = targetDirection.normalized.RotatedClockwise(offsetRotation);
+            transform.up = finalRotation;
         }
 
-        private Vector2 GetValidPointDirection()
+        private float GetValidPointDirectionOffset()
         {
-            if (HasPointDirectionRange)
-            {
-                float randomRotationOffset = UnityEngine.Random.Range(-_pointDirectionRange, _pointDirectionRange);
-                return PointDirection.RotatedClockwise(randomRotationOffset);
-            }
+            if (!HasPointDirectionRange) return 0f;
 
-            return PointDirection;
+            float randomRotationOffset = UnityEngine.Random.Range(-_pointDirectionRange, _pointDirectionRange);
+            return randomRotationOffset;
         }
     }
 }

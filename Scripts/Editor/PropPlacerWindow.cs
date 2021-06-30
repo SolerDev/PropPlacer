@@ -126,7 +126,7 @@ namespace PropPlacer.Editor
 
             Rename(prop);
             prop.Reposition(position);
-            prop.Rotate(surfaceNormal);
+            prop.PointTo(POINT_TO_SURFACE_NORMAL ? surfaceNormal : null);
 
             return true;
         }
