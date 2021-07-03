@@ -1,26 +1,51 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
 namespace PropPlacer.Runtime
 {
-
     [ExecuteAlways]
-    public class Prop : MonoBehaviour, ISpawnable, IReposition, IRenamable, IRotate
+    public class Prop : MonoBehaviour, ISpawnable, IReposition, IRenamable
     {
+        private static readonly List<Prop> PROP_OBJS = new List<Prop>();
+
+
         [SerializeField] private float _minDistanceToSameProp = 2f;
         [SerializeField] private float _minDistanceToDifferentProp = 0.75f;
-        private Vector2 Position => transform.position;
-        private Vector2 PointDirection => transform.up;
+        [SerializeField] private bool _flipOnSpawn = true;
+        [Range(0f, 180f)] [SerializeField] private float _surfaceNormalRange = 10f;
+        [Range(0f, 180f)] [SerializeField] private float _pointDirectionRange = 15f;
 
-        [Range(0f, 179f)] [SerializeField] private float _surfaceNormalRange = 10f;
-        [Range(0f, 179f)] [SerializeField] private float _pointDirectionRange = 15f;
+        private Transform Transf
+        {
+            get
+            {
+                if (_transform == null)
+                    _transform = transform;
 
-        private bool HasSurfaceNormalRange => !_surfaceNormalRange.Equals(0f);
-        private bool HasPointDirectionRange => !_pointDirectionRange.Equals(0f);
+                return _transform;
+            }
+        }
+        private Transform _transform;
+
+        private GameObject PrefabReference
+        {
+            get
+            {
+                if (_prefabReference == null)
+                    _prefabReference = PrefabUtility.GetCorrespondingObjectFromSource(gameObject);
+
+                return _prefabReference;
+            }
+        }
+        private GameObject _prefabReference;
+
+        public Vector2 Position => Transf.position;
+        private Vector2 PointDirection => Transf.up;
+
         public float MinDistanceToDifferentProp => _minDistanceToDifferentProp;
-
 
         public event Action OnSpawn;
         public event Action<Vector2> OnRotate;
@@ -28,62 +53,65 @@ namespace PropPlacer.Runtime
 
         public string Name { get => name; set => name = value; }
 
+        private void OnEnable() => PROP_OBJS.Add(this);
+        private void OnDisable() => PROP_OBJS.Remove(this);
+        private void OnDrawGizmosSelected()
+        {
+            DrawSurfaceNormalRange();
+            DrawPointDirectionRange();
+            Gizmos.DrawWireSphere(Position, _minDistanceToSameProp);
+
+            void DrawPointDirectionRange()
+            {
+                Debug.DrawLine(Position, Position + PointDirection.RotatedClockwise(_pointDirectionRange) * 3f, Color.green);
+                Debug.DrawLine(Position, Position + PointDirection.RotatedClockwise(-_pointDirectionRange) * 3f, Color.green);
+            }
+
+            void DrawSurfaceNormalRange()
+            {
+                Debug.DrawLine(Position, Position + PointDirection.RotatedClockwise(_surfaceNormalRange) * 3f, Color.yellow);
+                Debug.DrawLine(Position, Position + PointDirection.RotatedClockwise(-_surfaceNormalRange) * 3f, Color.yellow);
+            }
+        }
+
+        
+        
+        public void Spawn()
+        {
+            OnSpawn?.Invoke();
+
+            if (_flipOnSpawn && UnityEngine.Random.value < 0.5f)
+            {
+                Vector3 scale = Transf.localScale;
+                scale.x = -1f;
+                Transf.localScale = scale;
+            }
+        }
+
         public void Reposition(Vector2 position)
         {
-            transform.position = position;
+            Transf.position = position;
             OnReposition?.Invoke(position);
         }
 
-        public virtual void Face(Vector2 direction)
+        public void PointTo(Vector2? surfaceNormal)
         {
-            transform.up = direction;
-            OnRotate?.Invoke(Vector2.up);
+            Vector2 targetDirection = surfaceNormal.HasValue //todo:coalesce expression when C#8 in project
+                ? surfaceNormal.Value
+                : Vector2.zero;
+
+            targetDirection.RotatedClockwise(Vector2.SignedAngle(PointDirection, Vector2.right));
+
+            float offsetRotation = UnityEngine.Random.Range(-_pointDirectionRange, _pointDirectionRange);
+            Vector2 finalRotation = targetDirection.normalized.RotatedClockwise(offsetRotation);
+            Transf.up = finalRotation;
         }
 
-        public virtual void Tilt(float angle)
-        {
-            transform.Rotate(Vector3.forward, angle);
-            OnRotate?.Invoke(Vector2.up);
-        }
-
-        private static readonly List<Prop> PROP_OBJS = new List<Prop>();
-        public void Spawn() => OnSpawn?.Invoke();
-        private void OnEnable() => PROP_OBJS.Add(this);
-        private void OnDisable() => PROP_OBJS.Remove(this);
-
-
-
-
-
-
-
-        private void OnDrawGizmosSelected()
-        {
-            if (HasSurfaceNormalRange)
-                DrawSurfaceNormalRange();
-
-            if (HasPointDirectionRange)
-                DrawPointDirectionRange();
-
-
-            Gizmos.DrawWireSphere(Position, _minDistanceToSameProp);
-        }
-
-        private void DrawPointDirectionRange()
-        {
-            Debug.DrawLine(Position, Position + PointDirection.RotatedClockwise(_pointDirectionRange) * 3f, Color.green);
-            Debug.DrawLine(Position, Position + PointDirection.RotatedClockwise(-_pointDirectionRange) * 3f, Color.green);
-        }
-
-        private void DrawSurfaceNormalRange()
-        {
-            Debug.DrawLine(Position, Position + PointDirection.RotatedClockwise(_surfaceNormalRange) * 3f, Color.yellow);
-            Debug.DrawLine(Position, Position + PointDirection.RotatedClockwise(-_surfaceNormalRange) * 3f, Color.yellow);
-        }
 
         public bool CanBePlacedOnNormal(Vector2 surfaceNormal)
         {
-            if (!HasSurfaceNormalRange) return false;
+            if (_surfaceNormalRange.Equals(0f)) return false;
+            if (_surfaceNormalRange.Equals(180f)) return true;
 
 
             float dotRange = Vector2.Dot(PointDirection, PointDirection.RotatedClockwise(_surfaceNormalRange));
@@ -103,45 +131,24 @@ namespace PropPlacer.Runtime
             return false;
         }
 
-        public bool IsFarEnoughtFromOtherProps(Vector2 position)
+        public bool TargetPositionIsFarEnoughtFromOtherProps(Vector2 targetPosition)
         {
-            var propsOfSameType = PROP_OBJS.Where(propObj => propObj.gameObject.IsOfSamePrefabAs(gameObject));
+            var propsOfSameType = PROP_OBJS.Where(propObj => propObj.PrefabReference.Equals(this.PrefabReference));
             var propsOfDifferentType = PROP_OBJS.Except(propsOfSameType);
 
             bool isFarEnoughtFromSameType = !propsOfSameType.Any(p => IsClosertThan(p, _minDistanceToSameProp));
             bool isFarEnoughtFromDifferentType = !propsOfDifferentType.Any(p =>
-            IsClosertThan(p, _minDistanceToDifferentProp) ||
-            IsClosertThan(p, p.MinDistanceToDifferentProp));
+            IsClosertThan(p, this.MinDistanceToDifferentProp) ||
+            IsClosertThan(this, p.MinDistanceToDifferentProp));
 
             return isFarEnoughtFromSameType && isFarEnoughtFromDifferentType;
 
 
             bool IsClosertThan(Prop other, float distance)
             {
-                Vector2 distanceToProp = (Vector2)other.transform.position - position;
+                Vector2 distanceToProp = other.Position - targetPosition;
                 return Vector2.SqrMagnitude(distanceToProp) < distance * distance;
             }
-        }
-
-        public void PointTo(Vector2? surfaceNormal)
-        {
-            Vector2 targetDirection = surfaceNormal.HasValue //todo:coalesce expression when C#8 in project
-                ? surfaceNormal.Value
-                : Vector2.zero;
-
-            targetDirection.RotatedClockwise(Vector2.SignedAngle(PointDirection, Vector2.right));
-
-            float offsetRotation = GetValidPointDirectionOffset();
-            Vector2 finalRotation = targetDirection.normalized.RotatedClockwise(offsetRotation);
-            transform.up = finalRotation;
-        }
-
-        private float GetValidPointDirectionOffset()
-        {
-            if (!HasPointDirectionRange) return 0f;
-
-            float randomRotationOffset = UnityEngine.Random.Range(-_pointDirectionRange, _pointDirectionRange);
-            return randomRotationOffset;
         }
     }
 }

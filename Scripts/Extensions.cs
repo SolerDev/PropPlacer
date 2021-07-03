@@ -132,7 +132,7 @@ namespace PropPlacer.Runtime
                 UnityEngine.Random.Range(xMin, xMax),
                 UnityEngine.Random.Range(yMin, yMax));
 
-        public static T[] ArrayFiledWithFunctionResults<T>(Func<T> function, int count)
+        public static T[] CreateArrayFiledWithFunctionResults<T>(Func<T> function, int count)
         {
             T[] result = new T[count];
             for (int i = 0; i < count; i++)
@@ -150,26 +150,40 @@ namespace PropPlacer.Runtime
         }
 
 
-        public static bool TryGetColliderPoints(Collider2D collider, out IList<Vector2> points, Vector2? add = null)
+        public static bool HasPoints(this Collider2D collider)
         {
-            points = null;
-
-            if (collider is PolygonCollider2D polyColl)
-                points = polyColl.points;
-            else if (collider is EdgeCollider2D edgeColl)
-                points = edgeColl.points;
-            else if (collider is BoxCollider2D boxColl)
-                points = boxColl.bounds.ToPoints();
-
-            if (points == null) return false;
-
-            if (add.HasValue)
-                for (int i = 0; i < points.Count; i++)
-                    points[i] += add.Value;
-
-            return true;
+            return collider is PolygonCollider2D
+                || collider is EdgeCollider2D
+                || collider is BoxCollider2D;
         }
 
+        public static Vector2[] GetPoints(this Collider2D collider, Vector2? add = null)
+        {
+            if (!collider.HasPoints()) throw new ArgumentException("Collider is not of a valid type", nameof(collider));
+
+            Vector2[] points = ToPoints(collider).ToArray();
+
+            if (add.HasValue)
+                for (int i = 0; i < points.Length; i++)
+                    points[i] += add.Value;
+
+            return points;
+
+
+            Vector2[] ToPoints(Collider2D collider)
+            {
+                Vector2[] points = null;
+
+                if (collider is PolygonCollider2D polyColl)
+                    points = polyColl.points;
+                else if (collider is EdgeCollider2D edgeColl)
+                    points = edgeColl.points;
+                else if (collider is BoxCollider2D boxColl)
+                    points = boxColl.bounds.ToPoints();
+
+                return points;
+            }
+        }
     }
 
     internal struct Edge

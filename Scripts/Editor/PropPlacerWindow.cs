@@ -116,28 +116,33 @@ namespace PropPlacer.Editor
 
         protected static bool TrySpawnProp(Vector2 position, Vector2? surfaceNormal = null)
         {
-            Prop prop = GetProp();
+            Prop prop = CreateProp();
 
-            if (!prop.IsFarEnoughtFromOtherProps(position))
+            //check if prop should be despawned
+            if (!prop.TargetPositionIsFarEnoughtFromOtherProps(position))
                 return DisposeOfLastCreatedProp();
             if (surfaceNormal.HasValue && !prop.CanBePlacedOnNormal(surfaceNormal.Value))
                 return DisposeOfLastCreatedProp();
 
 
+
+            //spawn prop
+            Undo.RegisterCreatedObjectUndo(LAST_CREATED_OBJ, "Prop Brush painted an object");
+
             Rename(prop);
             prop.Reposition(position);
             prop.PointTo(POINT_TO_SURFACE_NORMAL ? surfaceNormal : null);
+            prop.Spawn();
 
             return true;
         }
 
-        protected static Prop GetProp()
+        protected static Prop CreateProp()
         {
             LAST_CREATED_OBJ = IS_USING_OBJECT_COLLECTION
                 ? (GameObject)PrefabUtility.InstantiatePrefab(OBJECT_COLLECTION.GetRandom(), PARENT)
                 : (GameObject)PrefabUtility.InstantiatePrefab(OBJECT_TO_SPAWN, PARENT);
 
-            Undo.RegisterCreatedObjectUndo(LAST_CREATED_OBJ, "Prop Brush painted an object");
             return LAST_CREATED_OBJ.GetComponent<Prop>();
         }
 
