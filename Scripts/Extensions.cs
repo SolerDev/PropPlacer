@@ -170,18 +170,18 @@ namespace PropPlacer.Runtime
             return points;
 
 
-            Vector2[] ToPoints(Collider2D collider)
+            Vector2[] ToPoints(Collider2D colliderToTrace)
             {
-                Vector2[] points = null;
+                Vector2[] tracedPoints = null;
 
-                if (collider is PolygonCollider2D polyColl)
-                    points = polyColl.points;
-                else if (collider is EdgeCollider2D edgeColl)
-                    points = edgeColl.points;
-                else if (collider is BoxCollider2D boxColl)
-                    points = boxColl.bounds.ToPoints();
+                if (colliderToTrace is PolygonCollider2D polyColl)
+                    tracedPoints = polyColl.points;
+                else if (colliderToTrace is EdgeCollider2D edgeColl)
+                    tracedPoints = edgeColl.points;
+                else if (colliderToTrace is BoxCollider2D boxColl)
+                    tracedPoints = boxColl.bounds.ToPoints();
 
-                return points;
+                return tracedPoints;
             }
         }
     }
